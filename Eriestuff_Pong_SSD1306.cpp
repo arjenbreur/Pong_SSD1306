@@ -3,19 +3,6 @@
  Library for displaying and playing Pong on an Adafruit SSD1306 128x64 OLED display.
  Created by Arjen Breur, Jan 2016.
  Code adapted from: http://michaelteeuw.nl/post/87381052117/building-pong
-
- *** Manual setup required ***
- Open the Adafruit_SSD1306.h file, and add these lines to the top of the file:
-
-    #ifndef Adafruit_SSD1306_h
-    #define Adafruit_SSD1306_h
-    
- Add this line at the end of the file:
- 
-    #endif
-    
-  This is standard practise Arduino code to prevent libraries from being included twice. 
- 
  */
 
 #include <Adafruit_SSD1306.h>
@@ -24,12 +11,18 @@
 
 // Constructor - Call this *before* the Arduino Setup() function
 Eriestuff_Pong_SSD1306::Eriestuff_Pong_SSD1306(Adafruit_SSD1306& display, SmoothAnalogInput& controlA, SmoothAnalogInput& controlB) : _display(display), _controlA(controlA), _controlB(controlB) {
-    init();
+    initNewGame();
     winningScore = 21;
     _isPlaying = false;
 }
 
 // PUBLIC METHODS //////////////////////////////////////////////////
+
+// Setup - Call this method from within the Arduino Setup() function
+void Eriestuff_Pong_SSD1306::setSoundOutputPin(int pin){
+    _soundOutputPin = pin;
+    pinMode(_soundOutputPin,OUTPUT);  // Setup the beeper GPIO as output
+}
 
 // Loop - Call this method from within the Arduino Loop() function
 void Eriestuff_Pong_SSD1306::loop(){
@@ -56,6 +49,7 @@ void Eriestuff_Pong_SSD1306::loop(){
 bool Eriestuff_Pong_SSD1306::isPlaying(){
     return _isPlaying;
 }
+
 bool Eriestuff_Pong_SSD1306::isGameOver(){
     return _isGameOver;
 }
@@ -66,15 +60,10 @@ void Eriestuff_Pong_SSD1306::startGame(){
     initNewGame();
     wipeScreen();
 }
-void Eriestuff_Pong_SSD1306::pauseGame(){
-    _isPlaying = false;
-}
-void Eriestuff_Pong_SSD1306::resumeGame(){
-    _isPlaying = true;
-}
+
 void Eriestuff_Pong_SSD1306::stopGame(){
     _isPlaying = false;
-    wipeScreen();
+    _isGameOver = false;
 }
 
 void Eriestuff_Pong_SSD1306::wipeScreen(void) {
@@ -92,8 +81,8 @@ void Eriestuff_Pong_SSD1306::wipeScreen(void) {
 
 void Eriestuff_Pong_SSD1306::gameOver(){
     _isGameOver = true;
-    stopGame();
     // display winner
+    wipeScreen();
     _display.setCursor(3, 20);
     _display.setTextSize(3);
     if(scoreA > scoreB) _display.println("A Wins!");
@@ -110,7 +99,7 @@ void Eriestuff_Pong_SSD1306::initNewGame(){
     controlAMin = 1023; // init to maximum
     controlBMax = controlAMax;
     controlBMin = controlAMin;
-    pongCountDown = 5;
+    pongCountDown = 3;
     paddleLocationA = 0;
     paddleLocationB = 0;
     lastPaddleLocationA = 0;
@@ -122,29 +111,35 @@ void Eriestuff_Pong_SSD1306::initNewGame(){
 }
 
 void Eriestuff_Pong_SSD1306::calculateMovement(){
-    int controlA = _controlA.read();
-    int controlB = _controlB.read();
+    boolean isARobot = false; // TODO: getRobotPaddleLocation() code is not ready to calculate controlA.
+    boolean isBRobot = true;
 
-    controlAMax = max(controlAMax, controlA*0.7); // take 90% of reading as maximum reading for the controls
-    controlAMin = min(controlAMin, controlA*1.3);
-    controlBMax = max(controlBMax, controlB*0.7);
-    controlBMin = min(controlBMin, controlB*1.3);
+    int controlAValue = _controlA.read();
+    int controlBValue = _controlB.read();
+
+    // take 70% of reading as maximum reading for the controls
+    controlAMax = max(controlAMax, controlAValue*0.7); 
+    controlAMin = min(controlAMin, controlAValue*1.3);
+    controlBMax = max(controlBMax, controlBValue*0.7);
+    controlBMin = min(controlBMin, controlBValue*1.3);
 
     int maxPaddleLocation = SCREEN_HEIGHT - PADDLE_HEIGHT;
 
-    paddleLocationA = map(controlA, controlAMax, controlAMin, 0, maxPaddleLocation);
-    if (paddleLocationA > maxPaddleLocation) paddleLocationA = maxPaddleLocation;
-    if (paddleLocationA < 0) paddleLocationA = 0;
-
-    boolean isRobot = true;
-    if(isRobot){
-        paddleLocationB = getRobotPaddleLocation();
+    if(isARobot){
+        paddleLocationA = getRobotPaddleLocation();
     }else{
-        paddleLocationB = map(controlB, controlBMax, controlBMin, 0, maxPaddleLocation);
+        paddleLocationA = map(controlAValue, controlAMax, controlAMin, 0, maxPaddleLocation);
+        if (paddleLocationA > maxPaddleLocation) paddleLocationA = maxPaddleLocation;
+        if (paddleLocationA < 0) paddleLocationA = 0;
     }
 
-    if (paddleLocationB > maxPaddleLocation) paddleLocationB = maxPaddleLocation;
-    if (paddleLocationB < 0) paddleLocationB = 0;
+    if(isBRobot){
+        paddleLocationB = getRobotPaddleLocation();
+    }else{
+        paddleLocationB = map(controlBValue, controlBMax, controlBMin, 0, maxPaddleLocation);
+        if (paddleLocationB > maxPaddleLocation) paddleLocationB = maxPaddleLocation;
+        if (paddleLocationB < 0) paddleLocationB = 0;
+    }
 
     int paddleSpeedA = paddleLocationA - lastPaddleLocationA;
     int paddleSpeedB = paddleLocationB - lastPaddleLocationB;
@@ -261,6 +256,7 @@ void Eriestuff_Pong_SSD1306::centerPrint(char *text, int y, int size){
     _display.print(text);
 }
 
+// TODO: getRobotPaddleLocation() code is not ready to calculate controlA.
 int Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
     int paddleSpeed = 0;
 
@@ -272,10 +268,6 @@ int Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
     if(ballSpeedX < 0 || diffX <=0){
         // ball is moving from B to A
         // or ball is beyond paddle B
-        // paddle B should get back to center
-        if(lastPaddleLocationB*2 != SCREEN_HEIGHT){
-            // paddleSpeed = (lastPaddleLocationB*2 > SCREEN_HEIGHT)? -1:1;
-        }
     }else{
         // ball is moving towards paddle B
         // try to intercept it
@@ -305,14 +297,15 @@ int Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
     // paddleSpeed is now perfect... resulting in a perfect Pong robot
     // but we want the robot to make mistakes...
 
-    // use same random number seed while score is the same  
+    // use same random number seed while score is the same 
+    // so, random numbers generated with random() will be the same for the duration of this point
     randomSeed(scoreA+scoreB);
 
     // limit the maximum speed to 1
     if(paddleSpeed>0) paddleSpeed = 1;
     if(paddleSpeed<0) paddleSpeed =-1;
 
-    // start moving too late
+    // start moving too late, don't react until the ball is somewhere between half and 1/3rd of the screen.
     int reactionDistance = random(SCREEN_WIDTH/2, SCREEN_WIDTH/3);
     if(diffX > reactionDistance) paddleSpeed = 0;
 
@@ -324,17 +317,21 @@ int Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
 }
 
 // SOUND METHODS //////////////////////////////////////////////////////////////
-void Eriestuff_Pong_SSD1306::soundBounce(){ beep(BEEPER, 500, 50);}
-void Eriestuff_Pong_SSD1306::soundPoint(){  beep(BEEPER, 150, 150);}
+
+void Eriestuff_Pong_SSD1306::soundBounce(){ beep(_soundOutputPin, 500, 50);}
+
+void Eriestuff_Pong_SSD1306::soundPoint(){  beep(_soundOutputPin, 150, 150);}
+
 void Eriestuff_Pong_SSD1306::soundStart(){
-    beep(BEEPER, 250, 100);
+    beep(_soundOutputPin, 250, 100);
     delay(100);
-    beep(BEEPER, 500, 100);
+    beep(_soundOutputPin, 500, 100);
     delay(100);
-    beep(BEEPER, 1000, 100);
+    beep(_soundOutputPin, 1000, 100);
     delay(100);
-    noTone(BEEPER);
+    noTone(_soundOutputPin);
 }
+
 // the sound producing function
 // http://web.media.mit.edu/~leah/LilyPad/07_sound_code.html
 void Eriestuff_Pong_SSD1306::beep(unsigned char speakerPin, int frequencyInHertz, long timeInMilliseconds){
@@ -342,9 +339,9 @@ void Eriestuff_Pong_SSD1306::beep(unsigned char speakerPin, int frequencyInHertz
     long delayAmount = (long)(1000000/frequencyInHertz);
     long loopTime = (long)((timeInMilliseconds*1000)/(delayAmount*2));
     for (x=0;x<loopTime;x++){  
-        digitalWrite(speakerPin,HIGH);
+        if(speakerPin>-1) digitalWrite(speakerPin,HIGH);
         delayMicroseconds(delayAmount);
-        digitalWrite(speakerPin,LOW);
+        if(speakerPin>-1) digitalWrite(speakerPin,LOW);
         delayMicroseconds(delayAmount);
-        }  
+    }  
 }
