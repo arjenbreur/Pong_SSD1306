@@ -58,9 +58,11 @@ class Eriestuff_Pong_SSD1306{
         const int BALL_SIZE       =  3;
         const int SCORE_PADDING   = 10;
         const int LOOP_DELAY      = 15;
+        const int DEFAULT_WINNNG_SCORE = 21;
         const float EFFECT_SPEED  =  0.5;
         const float MIN_Y_SPEED   =  0.5;
         const float MAX_Y_SPEED   =  2;
+        const float COUNT_DOWN = 0;
 
         // globals
         int _soundOutputPin = -1; // -1 = no sound

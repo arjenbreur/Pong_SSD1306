@@ -12,7 +12,7 @@
 // Constructor - Call this *before* the Arduino Setup() function
 Eriestuff_Pong_SSD1306::Eriestuff_Pong_SSD1306(Adafruit_SSD1306& display, SmoothAnalogInput& controlA, SmoothAnalogInput& controlB) : _display(display), _controlA(controlA), _controlB(controlB) {
     initNewGame();
-    winningScore = 21;
+    winningScore = DEFAULT_WINNNG_SCORE;
     _isPlaying = false;
 }
 
@@ -99,7 +99,7 @@ void Eriestuff_Pong_SSD1306::initNewGame(){
     controlAMin = 1023; // init to maximum
     controlBMax = controlAMax;
     controlBMin = controlAMin;
-    pongCountDown = 3;
+    pongCountDown = COUNT_DOWN;
     paddleLocationA = 0;
     paddleLocationB = 0;
     lastPaddleLocationA = 0;
