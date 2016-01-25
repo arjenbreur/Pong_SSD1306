@@ -106,8 +106,8 @@ void Eriestuff_Pong_SSD1306::initNewGame(){
     lastPaddleLocationB = 0;
     ballX = SCREEN_WIDTH/2;
     ballY = SCREEN_HEIGHT/2;
-    ballSpeedX = 2;
-    ballSpeedY = 1;
+    ballSpeedX = random(0,2) < 1 ? -2 : 2;
+    ballSpeedY = random(-2,2);
 }
 
 void Eriestuff_Pong_SSD1306::calculateMovement(){
