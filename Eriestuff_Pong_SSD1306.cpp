@@ -19,7 +19,7 @@ Eriestuff_Pong_SSD1306::Eriestuff_Pong_SSD1306(Adafruit_SSD1306& display, Smooth
 // PUBLIC METHODS //////////////////////////////////////////////////
 
 // Setup - Call this method from within the Arduino Setup() function
-void Eriestuff_Pong_SSD1306::setSoundOutputPin(int pin){
+void Eriestuff_Pong_SSD1306::setSoundOutputPin(byte pin){
     _soundOutputPin = pin;
     pinMode(_soundOutputPin,OUTPUT);  // Setup the beeper GPIO as output
 }
@@ -123,7 +123,7 @@ void Eriestuff_Pong_SSD1306::calculateMovement(){
     controlBMax = max(controlBMax, controlBValue*0.7);
     controlBMin = min(controlBMin, controlBValue*1.3);
 
-    int maxPaddleLocation = SCREEN_HEIGHT - PADDLE_HEIGHT;
+    byte maxPaddleLocation = SCREEN_HEIGHT - PADDLE_HEIGHT;
 
     if(isARobot){
         paddleLocationA = getRobotPaddleLocation();
@@ -141,8 +141,8 @@ void Eriestuff_Pong_SSD1306::calculateMovement(){
         if (paddleLocationB < 0) paddleLocationB = 0;
     }
 
-    int paddleSpeedA = paddleLocationA - lastPaddleLocationA;
-    int paddleSpeedB = paddleLocationB - lastPaddleLocationB;
+    byte paddleSpeedA = paddleLocationA - lastPaddleLocationA;
+    byte paddleSpeedB = paddleLocationB - lastPaddleLocationB;
 
     ballX += ballSpeedX;
     ballY += ballSpeedY;
@@ -199,7 +199,7 @@ void Eriestuff_Pong_SSD1306::draw(){
     _display.fillRect(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING,paddleLocationB,PADDLE_WIDTH,PADDLE_HEIGHT,WHITE);
 
     //draw center line
-    for (int i=0; i<SCREEN_HEIGHT; i+=4) {
+    for (byte i=0; i<SCREEN_HEIGHT; i+=4) {
         _display.drawFastVLine(SCREEN_WIDTH/2, i, 2, WHITE);
     }
 
@@ -209,7 +209,7 @@ void Eriestuff_Pong_SSD1306::draw(){
     //print scores
 
     //backwards indent score A. This is dirty, but it works ... ;)
-    int scoreAWidth = 5 * FONT_SIZE;
+    byte scoreAWidth = 5 * FONT_SIZE;
     if (scoreA > 9) scoreAWidth += 6 * FONT_SIZE;
     if (scoreA > 99) scoreAWidth += 6 * FONT_SIZE;
     if (scoreA > 999) scoreAWidth += 6 * FONT_SIZE;
@@ -225,12 +225,12 @@ void Eriestuff_Pong_SSD1306::draw(){
 }  
 
 //add effect to the ball
-void Eriestuff_Pong_SSD1306::addEffect(int paddleSpeed){
+void Eriestuff_Pong_SSD1306::addEffect(byte paddleSpeed){
     float oldBallSpeedY = ballSpeedY;
 
     //add effect to ball when paddle is moving while bouncing.
     //for every pixel of paddle movement, add or substact EFFECT_SPEED to ballspeed.
-    for (int effect = 0; effect < abs(paddleSpeed); effect++) {
+    for (byte effect = 0; effect < abs(paddleSpeed); effect++) {
         if (paddleSpeed > 0) {
             ballSpeedY += EFFECT_SPEED;
         } else {
@@ -250,20 +250,20 @@ void Eriestuff_Pong_SSD1306::addEffect(int paddleSpeed){
     if (ballSpeedY < -MAX_Y_SPEED) ballSpeedY = -MAX_Y_SPEED;
 }
 
-void Eriestuff_Pong_SSD1306::centerPrint(char *text, int y, int size){
+void Eriestuff_Pong_SSD1306::centerPrint(char *text, byte y, byte size){
     _display.setTextSize(size);
     _display.setCursor(SCREEN_WIDTH/2 - ((strlen(text))*6*size)/2,y);
     _display.print(text);
 }
 
 // TODO: getRobotPaddleLocation() code is not ready to calculate controlA.
-int Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
-    int paddleSpeed = 0;
+byte Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
+    byte paddleSpeed = 0;
 
     // x location of paddle face
-    int paddleX = SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING;
+    byte paddleX = SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING;
     // distance ball needs to travel in x direction until it hits paddle
-    int diffX = paddleX - ballX;
+    byte diffX = paddleX - ballX;
 
     if(ballSpeedX < 0 || diffX <=0){
         // ball is moving from B to A
@@ -274,9 +274,9 @@ int Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
         // number of iterations needed for ball to travel this distance in x direction   
         float cyclesToGo = abs(diffX)/ballSpeedX;
         // total distance in y direction ball will travel during these iterations (until ball hits paddle)
-        int predictedYWithoutBounce = ballY + (cyclesToGo * ballSpeedY); // will be negative when ball is moving up out of the screen.
+        byte predictedYWithoutBounce = ballY + (cyclesToGo * ballSpeedY); // will be negative when ball is moving up out of the screen.
         // distance in y direction left, after last bounce (from TOP or BOTTOM of screen)
-        int predictedY = predictedYWithoutBounce;
+        byte predictedY = predictedYWithoutBounce;
         // unless there is a bounce:
         if(predictedYWithoutBounce > SCREEN_HEIGHT){
             // ball will bounce (at least once) on bottom of screen
@@ -287,7 +287,7 @@ int Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
             predictedY = predictedYWithoutBounce *-1;
         }
         // set paddleSpeed to get to the predicted y location in time
-        int diffY = abs(lastPaddleLocationB - predictedY);
+        byte diffY = abs(lastPaddleLocationB - predictedY);
         paddleSpeed = diffY / cyclesToGo;
         if(predictedY < lastPaddleLocationB){
             paddleSpeed *=-1; // move up!
@@ -306,13 +306,13 @@ int Eriestuff_Pong_SSD1306::getRobotPaddleLocation(){
     if(paddleSpeed<0) paddleSpeed =-1;
 
     // start moving too late, don't react until the ball is somewhere between half and 1/3rd of the screen.
-    int reactionDistance = random(SCREEN_WIDTH/2, SCREEN_WIDTH/3);
+    byte reactionDistance = random(SCREEN_WIDTH/2, SCREEN_WIDTH/3);
     if(diffX > reactionDistance) paddleSpeed = 0;
 
     // hesitate now and then
     if(random(0,3) == 0) paddleSpeed = 0;
 
-    int paddleLocation = lastPaddleLocationB + paddleSpeed;
+    byte paddleLocation = lastPaddleLocationB + paddleSpeed;
     return paddleLocation; 
 }
 
